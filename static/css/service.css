@@ -41,5 +41,5 @@
 }
 
 textarea.form-control {
-    resize: none;  /* Prevents the user from resizing the text area manually */
+  resize: none; /* Prevents the user from resizing the text area manually */
 }

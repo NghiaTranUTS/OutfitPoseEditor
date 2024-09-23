@@ -58,11 +58,11 @@ def upload_file():
     prompt = request.form['prompt']
 
     # Simulate the transformation process
-    save_path = os.path.join('static/uploads', file.filename)
+    save_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(save_path)
 
     # Simulate a transformation and return a new image URL (replace this with AI logic)
-    transformed_image_url = '/static/uploads/' + file.filename  # Just returning the uploaded image for now
+    transformed_image_url = UPLOAD_FOLDER + file.filename  # Just returning the uploaded image for now
 
     # Return JSON response to AJAX
     return jsonify({"image_url": transformed_image_url})
