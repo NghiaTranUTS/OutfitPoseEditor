@@ -1,0 +1,77 @@
+/* Align items vertically in header */
+.navbar {
+    display: flex;
+    align-items: center;
+}
+
+.navbar-nav {
+    display: flex;
+    align-items: center;
+}
+
+.nav-item {
+    margin-left: 10px; /* Adds spacing between menu items */
+}
+
+/* Style for the toggle button (moon/sun switch) */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #4d89c9;
+    width: 50px;
+    height: 26px;
+    border-radius: 50px;
+    padding: 5px;
+    cursor: pointer;
+    position: relative;
+    top: 5px;
+}
+
+.checkbox:checked + .checkbox-label {
+  background-color: #292c35;
+}
+
+.checkbox-label .fas {
+    color: #fff;
+}
+
+.checkbox-label .fa-moon {
+    color: skyblue;
+}
+
+.checkbox-label .fa-sun {
+    color: #ffffff;
+}
+
+.checkbox-label .ball {
+    background-color: #fff;
+    width: 20px;
+    height: 20px;
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    border-radius: 50%;
+    /*transition: transform 0.2s linear;*/
+}
+
+.checkbox:checked + .checkbox-label .ball {
+    transform: translateX(24px);
+}
+
+.checkbox {
+    opacity: 0;
+    position: absolute;
+}
+
+/* Adjust alignment for the logo */
+.navbar-brand {
+    display: flex;
+    align-items: center;
+}
+
+/* Dark mode styles */
+body.dark-mode {
+    background-color: #292c35;
+    color: #fff;
+}
