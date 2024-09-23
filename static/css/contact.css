@@ -1,0 +1,50 @@
+/* Contact Page Specific Styles */
+.contact-form {
+    margin-top: 20px;
+}
+
+.contact-form .form-group {
+    margin-bottom: 15px;
+}
+
+.contact-form .form-control {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    border: 1px solid var(--secondary-color);
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.contact-form .form-control:focus {
+    border-color: var(--link-color);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.contact-form button {
+    background-color: var(--primary-color);
+    border-color: var(--button-hover-color);
+    padding: 10px 20px;
+    border-radius: 5px;
+    color: white;
+}
+
+.contact-form button:hover {
+    background-color: var(--button-hover-color);
+}
+
+.team-section {
+    margin-top: 50px;
+}
+
+.team-member {
+    background-color: var(--background-color);
+    border: 1px solid var(--secondary-color);
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.team-member h4 {
+    color: var(--primary-color);
+}

@@ -1,0 +1,45 @@
+/* Style for drag & drop area */
+.drop-zone {
+  border: 2px dashed #007bff;
+  border-radius: 10px;
+  padding: 130px;
+  text-align: center;
+  cursor: pointer;
+  background-color: #f8f9fa;
+  transition: background-color 0.3s ease;
+  min-height: 300px;
+}
+
+.drop-zone:hover {
+  background-color: #e9ecef;
+}
+
+.drop-zone:hover p {
+  text-decoration: underline;
+}
+
+
+.file-input {
+  display: none;
+}
+
+.drop-zone p {
+  color: #6c757d;
+  margin: 0;
+}
+
+.drop-zone.dragover {
+  background-color: #d4edda;
+}
+
+/* Result Box */
+.result-box {
+  border: 2px solid #007bff;
+  border-radius: 10px;
+  padding: 20px;
+  background-color: #f8f9fa;
+}
+
+textarea.form-control {
+    resize: none;  /* Prevents the user from resizing the text area manually */
+}

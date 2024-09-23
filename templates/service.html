@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Service - OutfitPoseEditor{% endblock %}
+
+{% block content %}
+<div class="text-center">
+  <h1 class="title">OutfitPoseEditor</h1>
+  <p class="lead">Upload an image and describe the outfit or pose change!</p>
+</div>
+
+<!-- Drag & Drop Box and Form -->
+<form id="upload-form">
+  <div class="form-group">
+    <label for="file-input">Choose an image or drag & drop:</label>
+    <div id="drop-zone" class="drop-zone">
+      <p id="drop-zone-text">Drag & drop your image here, or click to select</p>
+      <input type="file" id="file-input" class="file-input" name="file" accept="image/*" required>
+    </div>
+  </div>
+
+  <!-- Multi-line text area for prompt -->
+  <div class="form-group">
+    <label for="prompt">Describe the transformation:</label>
+    <textarea class="form-control" id="prompt" name="prompt" rows="3" placeholder="e.g. Change shirt to jacket, pose: waving" required></textarea>
+  </div>
+
+  <button type="submit" class="btn btn-primary btn-block">Generate Transformation</button>
+</form>
+
+<!-- Loading Spinner -->
+<div class="mt-3 text-center" id="progress" style="display:none;">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">Processing...</span>
+  </div>
+  <p class="mt-2">Processing your image, please wait...</p>
+</div>
+
+<!-- Result Box -->
+<div class="result-box mt-5 text-center" id="result-box" style="display:none;">
+  <h3>Transformation Result</h3>
+  <img id="transformed-image" src="" alt="Transformed Image" class="img-fluid mt-3"/>
+</div>
+
+{% endblock %}
