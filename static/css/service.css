@@ -2,12 +2,12 @@
 .drop-zone {
   border: 2px dashed #007bff;
   border-radius: 10px;
-  padding: 130px;
+  padding: 110px;
   text-align: center;
   cursor: pointer;
   background-color: #f8f9fa;
   transition: background-color 0.3s ease;
-  min-height: 300px;
+  min-height: 250px;
 }
 
 .drop-zone:hover {

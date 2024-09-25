@@ -65,6 +65,8 @@ document.getElementById('upload-form').addEventListener('submit', async function
       // Show the result box with the transformed image
       document.getElementById('transformed-image').src = data.image_url;
       document.getElementById('result-box').style.display = 'block';
+      // Scroll down to the result box
+      document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
     } else {
       alert('Error: Something went wrong with the upload.');
     }
