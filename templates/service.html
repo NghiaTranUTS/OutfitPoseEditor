@@ -40,6 +40,10 @@
   <div class="result-box mt-5 text-center" id="result-box" style="display:none;">
     <h3>Transformation Result</h3>
     <img id="transformed-image" src="" alt="Transformed Image" class="img-fluid mt-3"/>
+      <!-- Download Button (img) -->
+    <a id="download-btn" class="btn-download" href="#" download="transformed-image.jpg">
+      <img src="static/img/btnDownload.png" alt="Download Image" />
+    </a>
   </div>
   <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
 {% endblock %}

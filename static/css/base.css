@@ -2,6 +2,20 @@
 .navbar {
   display: flex;
   align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000; /* Ensure the navbar stays on top */
+  background-color: white; /* Background color to prevent transparency when scrolling */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Optional shadow for better visibility */
+  padding: 10px 0;
+}
+
+/* Adjust alignment for the logo */
+.navbar-brand {
+  display: flex;
+  align-items: center;
 }
 
 .navbar-nav {
@@ -17,6 +31,10 @@
   text-decoration: underline;
 }
 
+/* Add top padding to the body or content to prevent it from being hidden under the fixed navbar */
+body {
+  padding-top: 80px; /* Adjust this based on your navbar height */
+}
 
 /* Style for the toggle button (moon/sun switch) */
 .checkbox-label {
@@ -67,12 +85,6 @@
 .checkbox {
   opacity: 0;
   position: absolute;
-}
-
-/* Adjust alignment for the logo */
-.navbar-brand {
-  display: flex;
-  align-items: center;
 }
 
 /* Dark mode styles */

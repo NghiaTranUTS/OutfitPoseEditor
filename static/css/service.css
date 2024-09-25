@@ -2,12 +2,12 @@
 .drop-zone {
   border: 2px dashed #007bff;
   border-radius: 10px;
-  padding: 130px;
+  padding: 110px;
   text-align: center;
   cursor: pointer;
   background-color: #f8f9fa;
   transition: background-color 0.3s ease;
-  min-height: 300px;
+  min-height: 250px;
 }
 
 .drop-zone:hover {
@@ -32,14 +32,43 @@
   background-color: #d4edda;
 }
 
+textarea.form-control {
+  resize: none; /* Prevents the user from resizing the text area manually */
+}
+
 /* Result Box */
 .result-box {
   border: 2px solid #007bff;
   border-radius: 10px;
   padding: 20px;
   background-color: #f8f9fa;
+  position: relative; /* To position the download button inside */
 }
 
-textarea.form-control {
-  resize: none; /* Prevents the user from resizing the text area manually */
+/* Download Button - initially transparent */
+.btn-download {
+  position: absolute;
+  top: 10px; /* Adjust based on your needs */
+  right: 10px; /* Adjust based on your needs */
+  opacity: 0.1; /* Start with low opacity */
+  transition: opacity 0.3s ease; /* Smooth transition for opacity */
 }
+
+/* Image inside the download button */
+.btn-download img {
+  width: 160px; /* Adjust the size of the download button image */
+  height: 160px;
+}
+
+/* When hovering over the result box, make the download button fully visible */
+.result-box:hover .btn-download {
+  opacity: 1.0; /* Full opacity on hover */
+}
+
+/* Optional: Hover effect for the download button itself */
+.btn-download:hover {
+  cursor: pointer;
+  opacity: 1.0;
+}
+
+
