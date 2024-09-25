@@ -63,7 +63,13 @@ document.getElementById('upload-form').addEventListener('submit', async function
       document.getElementById('progress').style.display = 'none';
 
       // Show the result box with the transformed image
-      document.getElementById('transformed-image').src = data.image_url;
+      const transformedImage = document.getElementById('transformed-image');
+      const downloadBtn = document.getElementById('download-btn');
+
+      transformedImage.src = data.image_url;
+      downloadBtn.href = data.image_url;  // Set the download link
+      downloadBtn.download = `transformed-${fileInput.files[0].name}`;  // Set the download filename
+
       document.getElementById('result-box').style.display = 'block';
       // Scroll down to the result box
       document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
