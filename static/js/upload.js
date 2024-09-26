@@ -72,7 +72,9 @@ document.getElementById('upload-form').addEventListener('submit', async function
 
       document.getElementById('result-box').style.display = 'block';
       // Scroll down to the result box
-      document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
+      setTimeout(function () {
+        document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     } else {
       alert('Error: Something went wrong with the upload.');
     }
