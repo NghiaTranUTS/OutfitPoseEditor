@@ -18,6 +18,9 @@
 <!-- Include Header -->
 {% include 'partials/header.html' %}
 
+<!-- Always include the #alert-container -->
+<div id="alert-container" class="fixed-alerts"></div>
+
 <div class="container mt-5">
   <!-- Content block will be replaced by child templates -->
   {% block content %}{% endblock %}
@@ -27,7 +30,7 @@
 {% include 'partials/footer.html' %}
 
 <!-- Bootstrap JS and dependencies -->
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 <script src="{{ url_for('static', filename='js/base.js') }}"></script>
