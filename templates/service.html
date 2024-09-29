@@ -12,17 +12,10 @@
   <form id="upload-form">
     <div class="form-group">
       <label for="file-input">Choose an image or drag & drop:</label>
-      <div id="drop-zone" class="drop-zone">
+      <div id="drop-zone" class="drop-zone" onclick="document.getElementById('file-input').click();">
         <p id="drop-zone-text">Drag & drop your image here, or click to select</p>
         <input type="file" id="file-input" class="file-input" name="file" accept="image/*" required>
       </div>
-    </div>
-
-    <!-- Multi-line text area for prompt -->
-    <div class="form-group">
-      <label for="prompt">Describe the transformation:</label>
-      <textarea class="form-control" id="prompt" name="prompt" rows="3"
-                placeholder="e.g. Change shirt to jacket, pose: waving" required></textarea>
     </div>
 
     <button type="submit" class="btn btn-primary btn-block">Generate Transformation</button>
@@ -36,14 +29,109 @@
     <p class="mt-2">Processing your image, please wait...</p>
   </div>
 
-  <!-- Result Box -->
-  <div class="result-box mt-5 text-center" id="result-box" style="display:none;">
+  <!-- Segmented Image Result -->
+  <div class="result-box mt-5 text-center" id="segmentation-result" style="display:none;">
+    <h3>Segmented Image</h3>
+    <div id="segmented-image-container" style="position: relative;">
+      <img id="segmented-image" src="" alt="Segmented Image" class="img-fluid mt-3" style="max-width: 100%;"/>
+      <canvas id="mask-overlay" style="position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
+    </div>
+    <p>Select a part of the image to change:</p>
+    <select id="class-prompt-dropdown" class="form-control" style="display:none;">
+      <option value="">Choose a transformation...</option>
+      <!-- Add class-specific prompts here -->
+      <option value="Change shirt to jacket" data-class-id="6">Change shirt to jacket</option>
+      <option value="Change pants to shorts" data-class-id="7">Change pants to shorts</option>
+      <!-- Add more options as needed -->
+    </select>
+    <button id="apply-transformation" class="btn btn-success mt-3" style="display:none;">Apply Transformation</button>
+  </div>
+
+  <!-- Result Box for Edited Image -->
+  <div class="result-box mt-5 text-center" id="edited-image-result" style="display:none;">
     <h3>Transformation Result</h3>
     <img id="transformed-image" src="" alt="Transformed Image" class="img-fluid mt-3"/>
-      <!-- Download Button (img) -->
-    <a id="download-btn" class="btn-download" href="#" download="transformed-image.jpg">
+    <a id="download-btn" class="btn-download mt-3" href="#" download="transformed-image.jpg">
       <img src="static/img/btnDownload2.png" alt="Download Image" />
     </a>
   </div>
+
   <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+  <script>
+    // JavaScript to handle image upload and interaction
+    document.getElementById('upload-form').addEventListener('submit', function(event) {
+      event.preventDefault();
+      const fileInput = document.getElementById('file-input');
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      document.getElementById('progress').style.display = 'block'; // Show loading spinner
+
+      fetch('/upload', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('segmented-image').src = data.image_url; // Set segmented image
+        document.getElementById('segmentation-result').style.display = 'block'; // Show result box
+        document.getElementById('progress').style.display = 'none'; // Hide loading spinner
+
+        // Initialize canvas overlay here
+        const canvas = document.getElementById('mask-overlay');
+        canvas.width = document.getElementById('segmented-image').naturalWidth;
+        canvas.height = document.getElementById('segmented-image').naturalHeight;
+
+        // Enable click events on the segmented image for selection
+        const segmentedImage = document.getElementById('segmented-image');
+        segmentedImage.addEventListener('click', function(event) {
+          const rect = segmentedImage.getBoundingClientRect();
+          const x = event.clientX - rect.left;
+          const y = event.clientY - rect.top;
+          const classId = determineClassIdAtPosition(x, y); // Function to determine class ID based on click position
+          
+          if (classId !== null) {
+            document.getElementById('class-prompt-dropdown').style.display = 'block'; // Show dropdown
+            const dropdown = document.getElementById('class-prompt-dropdown');
+            dropdown.selectedIndex = 0; // Reset dropdown selection
+            dropdown.dataset.classId = classId; // Store selected class ID for later use
+          }
+        });
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('progress').style.display = 'none'; // Hide loading spinner
+      });
+    });
+
+    document.getElementById('apply-transformation').addEventListener('click', function() {
+      const dropdown = document.getElementById('class-prompt-dropdown');
+      const selectedPrompt = dropdown.value;
+      const classId = dropdown.dataset.classId;
+
+      // Perform inpainting based on selected prompt and class ID
+      fetch('/perform_inpainting', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          class_id: classId,
+          prompt: selectedPrompt,
+          negative_prompt: "Minimalistic" // Or however you want to handle negative prompts
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('transformed-image').src = data.edited_image_url; // Set transformed image
+        document.getElementById('edited-image-result').style.display = 'block'; // Show edited image result
+      })
+      .catch(error => console.error('Error:', error));
+    });
+
+    function determineClassIdAtPosition(x, y) {
+      // Placeholder function: replace with your logic to determine class ID at position (x, y)
+      return null; // return the appropriate class ID based on the position clicked
+    }
+  </script>
 {% endblock %}
