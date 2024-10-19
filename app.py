@@ -113,6 +113,7 @@ def upload():
                 'status': 'success',
                 'message': 'Image uploaded and segmented successfully.',
                 'upload_id': os.path.basename(upload_directory),
+                'base_image_path': os.path.join(upload_directory, original_filename),  # Base image path
                 'segmented_masks': segment_masks
             })
 
@@ -123,7 +124,6 @@ def upload():
         return jsonify({'status': 'error', 'message': 'An error occurred during upload.'}), 500
 
 
-
 @app.route('/transform', methods=['POST'])
 def transform():
     try:
@@ -131,24 +131,13 @@ def transform():
         segment = request.json.get('segment')
         prompt = request.json.get('prompt')
 
-        upload_directory = os.path.join(BASE_UPLOAD_FOLDER, upload_id)
-
-        if not os.path.exists(upload_directory):
-            return jsonify({'status': 'error', 'message': 'Invalid upload ID.'}), 400
-
-        # Simulate transformation process (replace with actual transformation logic)
-        transformed_filename = f'transformed_{segment}.png'
-        transformed_image_path = os.path.join(upload_directory, transformed_filename)
-
-        with open(transformed_image_path, 'wb') as f:
-            f.write(b'\x89PNG\r\n\x1a\n')  # Write dummy PNG data
-
-        transformed_image_url = os.path.join(BASE_UPLOAD_FOLDER, transformed_filename)
+        # Placeholder response for transformation
+        transformed_image_url = f"{BASE_UPLOAD_FOLDER}{upload_id}/Beret.jpeg"  # Mock URL for transformed image
 
         return jsonify({
             'status': 'success',
-            'message': 'Transformation applied successfully.',
-            'transformed_image_url': transformed_image_url
+            'message': 'Transformation would be applied successfully.',
+            'transformed_image_url': transformed_image_url  # Return the mocked transformed image URL
         })
 
     except Exception as e:

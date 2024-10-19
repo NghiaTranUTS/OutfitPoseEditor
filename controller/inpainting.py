@@ -2,7 +2,7 @@ import torch
 from diffusers import AutoPipelineForInpainting
 from PIL import Image
 import numpy as np
-from segmentation import segment_image, generate_mask_for_class  # Importing the necessary function from segmentation.py
+from segmentation import segment_image
 
 def perform_inpainting(image_path, target_class_id, prompt, negative_prompt):
     """ Perform segmentation, generate a mask, and apply inpainting based on the provided prompt. """
@@ -40,7 +40,7 @@ def generate_mask_for_class(pred_seg, target_class_id):
     return Image.fromarray((mask * 255).astype(np.uint8), 'L')
 
 if __name__ == "__main__":
-    image_path = "path/to/image.jpg"  # Change to the path of the image
+    image_path = "C:/Users/whale/Games/segment/Beret.jpg"  # Change to the path of the image
     target_class_id = 6  # Change as needed
     prompt = "Change shirt to jacket"  # Example prompt
     negative_prompt = "Minimalistic"  # Example negative prompt
@@ -48,6 +48,6 @@ if __name__ == "__main__":
     original_image, mask_image, edited_image = perform_inpainting(image_path, target_class_id, prompt, negative_prompt)
 
     # Save the results
-    original_image.save("original_image.jpg")
+    original_image.save("C:/Users/whale/Games/segment/Beret2.jpg")
     mask_image.save("mask_image.png")
     edited_image.save("edited_image.jpg")

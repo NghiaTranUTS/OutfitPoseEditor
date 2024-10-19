@@ -31,23 +31,26 @@
 <!-- Step 2: Display Masks for Selection -->
 <div class="result-box mt-5 text-center" id="segmentation-result" style="display:none;">
   <h3>Segmented Image</h3>
-  <div id="segmented-image-container" style="position: relative; display: inline-block;">
-    <!-- Original Image -->
-{#    <img id="segmented-image" src="" alt="Segmented Image" class="img-fluid mt-3" style="max-width: 100%;" />#}
-
-    <!-- Mask Overlays (will be appended here) -->
-    <div id="masks-container" style="position: absolute; top: 0; left: 0;"></div>
-  </div>
-  <p>Select a part of the image to transform:</p>
-  <div id="mask-buttons-container" class="mt-3"></div>
-
-  <div class="form-group mt-3">
-    <label for="transformation-prompt">Describe the transformation:</label>
-    <textarea class="form-control" id="transformation-prompt" rows="3"
-              placeholder="e.g., Change hair color to blonde"></textarea>
-  </div>
-  <button id="apply-transformation" class="btn btn-success mt-3" style="display:none;">Apply Transformation</button>
+  <canvas id="image-canvas" class="img-fluid mt-3"></canvas>
 </div>
+
+<!-- Modification Panel as Modal -->
+<div id="modification-modal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h3>Modify <span id="selected-mask-name"></span></h3>
+    <div id="modification-options"></div>
+    <button id="apply-modification" class="btn btn-primary">Apply Modifications</button>
+  </div>
+</div>
+
+<!-- Display selected transformations -->
+<div id="selected-transformations-display" class="mt-5">
+  <!-- Dynamically populated with selected transformations -->
+</div>
+
+<!-- Send Transformations Button -->
+<button id="send-transformations" class="btn btn-success mt-3" style="display:none;">Send Transformations</button>
 
 <!-- Result Box for Edited Image -->
 <div class="result-box mt-5 text-center" id="edited-image-result" style="display:none;">
@@ -58,32 +61,126 @@
   </a>
 </div>
 
+<!-- Modal Styling -->
+<style>
+  /* The Modal (background) */
+  .modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+  }
+
+  /* Modal Content/Box */
+  .modal-content {
+    background-color: #fefefe;
+    margin: 10% auto; /* 10% from the top and centered */
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #888;
+    width: 40%; /* Could be more or less, depending on screen size */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    position: relative;
+  }
+
+  /* The Close Button */
+  .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+  }
+
+  .close:hover,
+  .close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  /* Styling the options within the modal */
+  #modification-options label {
+    font-weight: bold;
+    display: block;
+    margin-top: 10px;
+  }
+
+  #modification-options input {
+    margin-right: 5px;
+  }
+
+  .option-group {
+    margin-bottom: 15px;
+  }
+
+  /* Button styling */
+  #apply-modification {
+    margin-top: 20px;
+    width: 100%;
+  }
+
+  #selected-transformations-display .transformation-item {
+    background-color: #f0f0f0;
+    padding: 10px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  #selected-transformations-display .remove-btn {
+    background-color: transparent;
+    color: red;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+  }
+
+  #selected-transformations-display .remove-btn:hover {
+    color: darkred;
+  }
+</style>
+
 <script>
 // Variables for managing upload and transformation
-let uploadId = ''; // To track the unique upload directory
-let selectedMask = null; // Track the selected mask
+let uploadId = '';
+let selectedMask = null;
+let baseImage, maskImages = {};
+let canvas, ctx;
+let currentHoveredMask = null;
 
-// Color map for each segment label (RGB format)
-const colorMap = {
-  0: [0, 0, 0], // Background: Black
-  1: [128, 0, 0], // Hat: Maroon
-  2: [255, 165, 0], // Hair: Orange
-  3: [255, 215, 0], // Sunglasses: Gold
-  4: [0, 128, 0], // Upper-clothes: Green
-  5: [0, 0, 255], // Skirt: Blue
-  6: [75, 0, 130], // Pants: Indigo
-  7: [238, 130, 238], // Dress: Violet
-  8: [255, 20, 147], // Belt: Deep Pink
-  9: [139, 69, 19], // Left-shoe: Saddle Brown
-  10: [210, 105, 30], // Right-shoe: Chocolate
-  11: [255, 192, 203], // Face: Pink
-  12: [0, 255, 127], // Left-leg: Spring Green
-  13: [32, 178, 170], // Right-leg: Light Sea Green
-  14: [70, 130, 180], // Left-arm: Steel Blue
-  15: [135, 206, 250], // Right-arm: Light Sky Blue
-  16: [240, 230, 140], // Bag: Khaki
-  17: [255, 0, 255] // Scarf: Magenta
+// Segment labels with modifications
+const segments = {
+  1: { name: "Hat", color: [128, 0, 0], modifications: { 'Change Color': ['Unchanged', 'Red', 'Blue'], 'Change Style': ['Unchanged', 'Cap', 'Wide Brim'] } },
+  2: { name: "Hair", color: [255, 165, 0], modifications: { 'Change Color': ['Unchanged', 'Blonde', 'Brown'], 'Change Style': ['Unchanged', 'Short', 'Long'] } },
+  3: { name: "Sunglasses", color: [255, 215, 0], modifications: { 'Change Color': ['Unchanged', 'Black', 'White'], 'Change Style': ['Unchanged', 'Round', 'Square'] } },
+  4: { name: "Upper-clothes", color: [0, 128, 0], modifications: { 'Change Color': ['Unchanged', 'Green', 'Yellow'], 'Change Style': ['Unchanged', 'T-shirt', 'Jacket'] } },
+  5: { name: "Skirt", color: [0, 0, 255], modifications: { 'Change Color': ['Unchanged', 'Red', 'Pink'], 'Change Style': ['Unchanged', 'Short', 'Long'] } },
+  6: { name: "Pants", color: [75, 0, 130], modifications: { 'Change Color': ['Unchanged', 'Blue', 'Black'], 'Change Style': ['Unchanged', 'Jeans', 'Shorts'] } },
+  7: { name: "Dress", color: [238, 130, 238], modifications: { 'Change Color': ['Unchanged', 'Purple', 'Blue'], 'Change Style': ['Unchanged', 'Formal', 'Casual'] } },
+  8: { name: "Belt", color: [255, 20, 147], modifications: { 'Change Color': ['Unchanged', 'Brown', 'Black'] } },
+  9: { name: "Left-shoe", color: [139, 69, 19], modifications: { 'Change Color': ['Unchanged', 'Brown', 'Black'] } },
+  10: { name: "Right-shoe", color: [210, 105, 30], modifications: { 'Change Color': ['Unchanged', 'Brown', 'Black'] } },
+  11: { name: "Face", color: [255, 192, 203], modifications: { 'Change Expression': ['Unchanged', 'Smile', 'Neutral', 'Angry'] } },
+  12: { name: "Left-leg", color: [0, 255, 127], modifications: { 'Change Color': ['Unchanged', 'Green', 'Blue'] } },
+  13: { name: "Right-leg", color: [32, 178, 170], modifications: { 'Change Color': ['Unchanged', 'Green', 'Blue'] } },
+  14: { name: "Left-arm", color: [70, 130, 180], modifications: { 'Change Color': ['Unchanged', 'Blue', 'Yellow'] } },
+  15: { name: "Right-arm", color: [135, 206, 250], modifications: { 'Change Color': ['Unchanged', 'Blue', 'Yellow'] } },
+  16: { name: "Bag", color: [240, 230, 140], modifications: { 'Change Color': ['Unchanged', 'Khaki', 'Brown'] } },
+  17: { name: "Scarf", color: [255, 0, 255], modifications: { 'Change Color': ['Unchanged', 'Magenta', 'Pink'] } }
 };
+
+// Object to store selected transformations
+let selectedTransformations = {};
 
 // Drag & Drop functionality
 const dropZone = document.getElementById('drop-zone');
@@ -105,13 +202,13 @@ dropZone.addEventListener('drop', (e) => {
 
   if (e.dataTransfer.files.length) {
     fileInput.files = e.dataTransfer.files;
-    updateDropZoneText(fileInput.files[0].name); // Update the drop zone text
+    updateDropZoneText(fileInput.files[0].name);
   }
 });
 
 fileInput.addEventListener('change', () => {
   if (fileInput.files.length) {
-    updateDropZoneText(fileInput.files[0].name);  // Update the drop zone text
+    updateDropZoneText(fileInput.files[0].name);
   }
 });
 
@@ -125,10 +222,7 @@ document.getElementById('upload-form').addEventListener('submit', async function
   const formData = new FormData();
   formData.append('file', fileInput.files[0]);
 
-  // Show the progress indicator
   document.getElementById('progress').style.display = 'block';
-
-  // Hide previous results
   document.getElementById('segmentation-result').style.display = 'none';
 
   try {
@@ -138,163 +232,216 @@ document.getElementById('upload-form').addEventListener('submit', async function
     });
 
     if (response.ok) {
-      const data = await response.json(); // Expecting JSON with mask paths
+      const data = await response.json();
 
-      // Hide the progress indicator
       document.getElementById('progress').style.display = 'none';
-
-      // Store the upload ID for later transformation
       uploadId = data.upload_id;
 
-      // Display the segmented image container
-      document.getElementById('segmentation-result').style.display = 'block';
+      canvas = document.getElementById('image-canvas');
+      ctx = canvas.getContext('2d');
 
-      // Display the masks over the original image
-      const masksContainer = document.getElementById('masks-container');
-      const maskButtonsContainer = document.getElementById('mask-buttons-container');
-      masksContainer.innerHTML = ''; // Clear existing masks
-      maskButtonsContainer.innerHTML = ''; // Clear existing buttons
+      baseImage = new Image();
+      baseImage.src = `/${data.base_image_path}`;
+      baseImage.onload = function () {
+        canvas.width = baseImage.width;
+        canvas.height = baseImage.height;
+        ctx.drawImage(baseImage, 0, 0);
+      };
 
-      // Display each mask with a button to select it
       for (const [classId, maskPath] of Object.entries(data.segmented_masks)) {
-        // Create an image for the mask overlay
-        const maskImg = new Image();
-        maskImg.src = `/${maskPath}`; // Use relative path from the response
-        maskImg.className = 'mask-overlay';
-        maskImg.style.position = 'absolute';
-        maskImg.style.top = 0;
-        maskImg.style.left = 0;
-        maskImg.style.opacity = 0.9; // Make the mask semi-transparent
-        maskImg.style.pointerEvents = 'none'; // Ensure it doesn't block clicks
-        maskImg.dataset.classId = classId;
+        const maskImage = new Image();
+        maskImage.src = `/${maskPath}`;
+        maskImage.dataset.classId = classId;
 
-        maskImg.onload = () => {
-          // Apply transparency filter to the mask
-          applyTransparencyToMask(maskImg, classId);
+        maskImage.onload = function () {
+          maskImages[classId] = convertMaskToColor(maskImage, classId);
         };
-
-        // Append the mask to the container
-        masksContainer.appendChild(maskImg);
-
-        // Create a button to select the mask
-        const maskButton = document.createElement('button');
-        maskButton.className = 'btn btn-outline-primary mr-2 mt-2';
-        maskButton.innerText = `Select ${classId}`;
-        maskButton.onclick = function() {
-          // Select the mask on button click
-          selectMask(classId);
-        };
-        maskButtonsContainer.appendChild(maskButton);
       }
 
-      // Show the transformation button
-      document.getElementById('apply-transformation').style.display = 'block';
+      document.getElementById('segmentation-result').style.display = 'block';
+      setupMaskInteractions();
     } else {
       alert('Error: Something went wrong with the upload.');
     }
   } catch (error) {
     console.error('Error:', error);
-    document.getElementById('progress').style.display = 'none'; // Hide loading spinner
+    document.getElementById('progress').style.display = 'none';
     alert('Error: Failed to process the request.');
   }
 });
 
-// Function to select a mask
-function selectMask(classId) {
-  // Update the selected mask and visually highlight it
-  selectedMask = classId;
-
-  // Highlight the selected mask
-  document.querySelectorAll('.mask-overlay').forEach(img => {
-    img.style.border = img.dataset.classId === classId ? '3px solid red' : 'none';
-  });
-
-  console.log(`Selected mask class: ${classId}`);
-}
-
-// Function to make the mask transparent on black pixels and color on white pixels
-function applyTransparencyToMask(maskImage, classId) {
+function convertMaskToColor(maskImage, classId) {
+  if (classId === '0') return null;
   const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-
-  // Set canvas dimensions to match the mask image
+  const ctx = canvas.getContext('2d');
   canvas.width = maskImage.width;
   canvas.height = maskImage.height;
-
-  // Draw the mask image onto the canvas
-  context.drawImage(maskImage, 0, 0);
-
-  // Get image data from canvas
-  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(maskImage, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const data = imageData.data;
-
-  // Get the RGB color for the classId from the colorMap
-  const [redColor, greenColor, blueColor] = colorMap[classId];
-
-  // Loop through each pixel to modify transparency and color based on mask value
+  const [redColor, greenColor, blueColor] = segments[classId].color;
   for (let i = 0; i < data.length; i += 4) {
-    const red = data[i];
-    const green = data[i + 1];
-    const blue = data[i + 2];
-
-    // If the pixel is black (0,0,0), make it fully transparent
-    if (red === 0 && green === 0 && blue === 0) {
-      data[i + 3] = 0; // Set alpha to 0 (fully transparent)
+    if (data[i] === 0) {
+      data[i + 3] = 0;
     } else {
-      // Apply color based on the classId from the colorMap
       data[i] = redColor;
       data[i + 1] = greenColor;
       data[i + 2] = blueColor;
-      data[i + 3] = 200; // Set alpha to 200 (semi-transparent)
+      data[i + 3] = 150;
     }
   }
-
-  // Update canvas with new image data
-  context.putImageData(imageData, 0, 0);
-
-  // Set the source of the mask image to the modified canvas
-  maskImage.src = canvas.toDataURL();
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
 }
 
-// Handle apply transformation button click
-document.getElementById('apply-transformation').addEventListener('click', function() {
-  const prompt = document.getElementById('transformation-prompt').value;
+function setupMaskInteractions() {
+  canvas.addEventListener('mousemove', handleMouseMove);
+  canvas.addEventListener('click', handleClick);
+}
 
-  if (!selectedMask || !prompt) {
-    alert('Please select a segment and provide a transformation prompt.');
-    return;
+function handleMouseMove(e) {
+  const [x, y] = getMousePos(e);
+  const hoveredMask = getMaskAtPosition(x, y);
+
+  if (hoveredMask !== currentHoveredMask) {
+    if (currentHoveredMask) drawMask(currentHoveredMask, 0.3);
+    if (hoveredMask) drawMask(hoveredMask, 0.7);
+    currentHoveredMask = hoveredMask;
+  }
+}
+
+function handleClick(e) {
+  if (currentHoveredMask) {
+    selectedMask = currentHoveredMask;
+    drawMask(selectedMask, 0.9);
+    showModificationPanel(selectedMask);
+  }
+}
+
+function drawMask(classId, opacity) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(baseImage, 0, 0);
+  const maskCanvas = maskImages[classId];
+  ctx.globalAlpha = opacity;
+  ctx.drawImage(maskCanvas, 0, 0);
+  ctx.globalAlpha = 1.0;
+}
+
+function getMousePos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return [e.clientX - rect.left, e.clientY - rect.top];
+}
+
+function getMaskAtPosition(x, y) {
+  for (const [classId, maskCanvas] of Object.entries(maskImages)) {
+    if (classId === '0') continue;
+    const maskCtx = maskCanvas.getContext('2d');
+    const pixelData = maskCtx.getImageData(x, y, 1, 1).data;
+    if (pixelData[3] !== 0) return classId;
+  }
+  return null;
+}
+
+function showModificationPanel(maskId) {
+  const maskName = segments[maskId].name;
+  const modifications = segments[maskId].modifications;
+  document.getElementById('selected-mask-name').innerText = maskName;
+
+  const optionsContainer = document.getElementById('modification-options');
+  optionsContainer.innerHTML = '';
+
+  for (const [modType, options] of Object.entries(modifications)) {
+    const modLabel = document.createElement('label');
+    modLabel.innerText = modType;
+    optionsContainer.appendChild(modLabel);
+
+    options.forEach(option => {
+      const radio = document.createElement('input');
+      radio.type = 'radio';
+      radio.value = option;
+      radio.name = modType;
+      optionsContainer.appendChild(radio);
+      optionsContainer.appendChild(document.createTextNode(option));
+      optionsContainer.appendChild(document.createElement('br'));
+    });
   }
 
-  // Perform transformation based on selected mask and prompt
-  fetch('/transform', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      upload_id: uploadId,
-      segment: selectedMask,
-      prompt: prompt
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.status === 'success') {
-      // Set transformed image source and display
+  const modal = document.getElementById('modification-modal');
+  modal.style.display = 'block';
+
+  document.querySelector('.modal .close').onclick = function () {
+    modal.style.display = 'none';
+  };
+
+  window.onclick = function (event) {
+    if (event.target === modal) modal.style.display = 'none';
+  };
+
+  document.getElementById('apply-modification').onclick = function () {
+    const modificationsApplied = {};
+    optionsContainer.querySelectorAll('input[type="radio"]:checked').forEach(input => {
+      modificationsApplied[input.name] = input.value;
+    });
+
+    selectedTransformations[maskId] = modificationsApplied;
+    modal.style.display = 'none';
+
+    updateTransformationsDisplay();
+  };
+}
+
+// Function to update the display of selected transformations
+function updateTransformationsDisplay() {
+  const display = document.getElementById('selected-transformations-display');
+  display.innerHTML = ''; // Clear previous items
+
+  for (const [maskId, modifications] of Object.entries(selectedTransformations)) {
+    const transformationDiv = document.createElement('div');
+    transformationDiv.className = 'transformation-item';
+    transformationDiv.innerHTML = `<span>${segments[maskId].name} - ${JSON.stringify(modifications)}</span>`;
+
+    // Add remove button for each transformation
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-btn';
+    removeBtn.innerHTML = '&times;';
+    removeBtn.onclick = function () {
+      delete selectedTransformations[maskId];
+      updateTransformationsDisplay();
+    };
+    transformationDiv.appendChild(removeBtn);
+
+    display.appendChild(transformationDiv);
+  }
+
+  // Show send transformations button if there are any transformations
+  document.getElementById('send-transformations').style.display = Object.keys(selectedTransformations).length > 0 ? 'block' : 'none';
+}
+
+// Send transformations to server
+document.getElementById('send-transformations').onclick = async function () {
+  try {
+    const response = await fetch('/transform', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        upload_id: uploadId,
+        transformations: selectedTransformations
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
       document.getElementById('transformed-image').src = data.transformed_image_url;
       document.getElementById('edited-image-result').style.display = 'block';
-
-      // Update download button
-      const downloadBtn = document.getElementById('download-btn');
-      downloadBtn.href = data.transformed_image_url;
     } else {
-      alert(data.message);
+      alert('Error: Failed to apply transformations.');
     }
-  })
-  .catch(error => {
+  } catch (error) {
     console.error('Error:', error);
-    alert('An error occurred while applying the transformation.');
-  });
-});
+    alert('Error: An error occurred while sending transformations.');
+  }
+};
 </script>
 {% endblock %}
