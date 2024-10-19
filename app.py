@@ -90,10 +90,22 @@ def upload():
         file = request.files['file']
 
         if file and allowed_file(file.filename):
-            original_filename = secure_filename(file.filename)
+            # Use a fixed filename for the original image
+            original_filename = "original_image.png"
             upload_directory = create_upload_directory()
             original_image_path = os.path.join(upload_directory, original_filename)
-            file.save(original_image_path)
+
+            # Open the image to check dimensions
+            with Image.open(file) as img:  # Open directly from the uploaded file
+                # Resize if necessary
+                max_dimension = 1024
+                if img.width > max_dimension or img.height > max_dimension:
+                    img.thumbnail((max_dimension, max_dimension), Image.ANTIALIAS)
+
+                img.save(original_image_path)  # Save the resized image
+
+            # Construct the base image URL for the frontend
+            base_image_url = os.path.join(upload_directory, original_filename).replace("\\", "/")
 
             # Segment the image using imported functions
             original_image, pred_seg = segment_image(original_image_path)
@@ -113,11 +125,11 @@ def upload():
                 'status': 'success',
                 'message': 'Image uploaded and segmented successfully.',
                 'upload_id': os.path.basename(upload_directory),
-                'base_image_path': os.path.join(upload_directory, original_filename),  # Base image path
+                'base_image_path': base_image_url,  # Base image URL for frontend
                 'segmented_masks': segment_masks
             })
 
-        return jsonify({'status': 'error', 'message': 'Unsupported file format. Please upload PNG, JPG, or JPEG images.'}), 400
+        return jsonify({'status': 'error', 'message': 'Unsupported file format. Please upload PNG, JPG, or JPEG'}), 400
 
     except Exception as e:
         error_logger.error(f"Error during upload: {str(e)}")
@@ -132,7 +144,7 @@ def transform():
         prompt = request.json.get('prompt')
 
         # Placeholder response for transformation
-        transformed_image_url = f"{BASE_UPLOAD_FOLDER}{upload_id}/Beret.jpeg"  # Mock URL for transformed image
+        transformed_image_url = f"{BASE_UPLOAD_FOLDER}{upload_id}/original_image.png"  # Mock URL for transformed image
 
         return jsonify({
             'status': 'success',
