@@ -50,7 +50,7 @@
 </div>
 
 <!-- Send Transformations Button -->
-<button id="send-transformations" class="btn btn-success mt-3" style="display:none;">Send Transformations</button>
+<button id="send-transformations" class="btn btn-primary btn-block" style="display:none;">Send Transformations</button>
 
 <!-- Result Box for Edited Image -->
 <div class="result-box mt-5 text-center" id="edited-image-result" style="display:none;">
@@ -63,6 +63,7 @@
 
 <!-- Modal Styling -->
 <style>
+
   /* The Modal (background) */
   .modal {
     display: none; /* Hidden by default */
@@ -78,7 +79,8 @@
 
   /* Modal Content/Box */
   .modal-content {
-    background-color: #fefefe;
+    background-color: #fefefe; /* Light background */
+    color: #333; /* Dark text */
     margin: 10% auto; /* 10% from the top and centered */
     padding: 20px;
     border-radius: 10px;
@@ -86,6 +88,13 @@
     width: 40%; /* Could be more or less, depending on screen size */
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     position: relative;
+  }
+
+  /* Dark Mode Modal Content */
+  body.dark-mode .modal-content {
+    background-color: #444; /* Darker background */
+    color: #f0f0f0; /* Light text */
+    border: 1px solid #666; /* Light border */
   }
 
   /* The Close Button */
@@ -101,7 +110,7 @@
 
   .close:hover,
   .close:focus {
-    color: black;
+    color: #fff; /* Change color on hover */
     text-decoration: none;
     cursor: pointer;
   }
@@ -127,6 +136,7 @@
     width: 100%;
   }
 
+  /* Transformation items */
   #selected-transformations-display .transformation-item {
     background-color: #f0f0f0;
     padding: 10px;
@@ -137,16 +147,24 @@
     align-items: center;
   }
 
+  body.dark-mode #selected-transformations-display .transformation-item {
+    background-color: #555;
+  }
+
   #selected-transformations-display .remove-btn {
     background-color: transparent;
-    color: red;
+    color: #ff3333; /* Slightly lighter red */
     border: none;
     cursor: pointer;
     font-size: 16px;
   }
 
   #selected-transformations-display .remove-btn:hover {
-    color: darkred;
+    color: #000; /* Darker red on hover */
+  }
+
+  body.dark-mode #selected-transformations-display .remove-btn:hover {
+    color: #f0f0f0; /* Darker red on hover */
   }
 </style>
 
