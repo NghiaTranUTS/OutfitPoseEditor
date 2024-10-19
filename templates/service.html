@@ -3,47 +3,445 @@
 {% block title %}Service - OutfitPoseEditor{% endblock %}
 
 {% block content %}
-  <div class="text-center">
-    <h1 class="title">OutfitPoseEditor</h1>
-    <p class="lead">Upload an image and describe the outfit or pose change!</p>
-  </div>
+<div class="text-center">
+  <h1 class="title">OutfitPoseEditor</h1>
+  <p class="lead">Upload an image and choose which part to change!</p>
+</div>
 
-  <!-- Drag & Drop Box and Form -->
-  <form id="upload-form">
-    <div class="form-group">
-      <label for="file-input">Choose an image or drag & drop:</label>
-      <div id="drop-zone" class="drop-zone">
-        <p id="drop-zone-text">Drag & drop your image here, or click to select</p>
-        <input type="file" id="file-input" class="file-input" name="file" accept="image/*" required>
-      </div>
+<!-- Step 1: Image Upload and Segmentation -->
+<form id="upload-form">
+  <div class="form-group">
+    <label for="file-input">Choose an image or drag & drop:</label>
+    <div id="drop-zone" class="drop-zone" onclick="document.getElementById('file-input').click();">
+      <p id="drop-zone-text">Drag & drop your image here, or click to select</p>
+      <input type="file" id="file-input" class="file-input" name="file" accept="image/*" required>
     </div>
-
-    <!-- Multi-line text area for prompt -->
-    <div class="form-group">
-      <label for="prompt">Describe the transformation:</label>
-      <textarea class="form-control" id="prompt" name="prompt" rows="3"
-                placeholder="e.g. Change shirt to jacket, pose: waving" required></textarea>
-    </div>
-
-    <button type="submit" class="btn btn-primary btn-block">Generate Transformation</button>
-  </form>
-
-  <!-- Loading Spinner -->
-  <div class="mt-3 text-center" id="progress" style="display:none;">
-    <div class="spinner-border text-primary" role="status">
-      <span class="sr-only">Processing...</span>
-    </div>
-    <p class="mt-2">Processing your image, please wait...</p>
   </div>
+  <button type="submit" class="btn btn-primary btn-block">Upload Image</button>
+</form>
 
-  <!-- Result Box -->
-  <div class="result-box mt-5 text-center" id="result-box" style="display:none;">
-    <h3>Transformation Result</h3>
-    <img id="transformed-image" src="" alt="Transformed Image" class="img-fluid mt-3"/>
-      <!-- Download Button (img) -->
-    <a id="download-btn" class="btn-download" href="#" download="transformed-image.jpg">
-      <img src="static/img/btnDownload2.png" alt="Download Image" />
-    </a>
+<!-- Loading Spinner -->
+<div class="mt-3 text-center" id="progress" style="display:none;">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">Processing...</span>
   </div>
-  <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+  <p class="mt-2">Processing your image, please wait...</p>
+</div>
+
+<!-- Step 2: Display Masks for Selection -->
+<div class="result-box mt-5 text-center" id="segmentation-result" style="display:none;">
+  <h3>Segmented Image</h3>
+  <canvas id="image-canvas" class="img-fluid mt-3"></canvas>
+</div>
+
+<!-- Modification Panel as Modal -->
+<div id="modification-modal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h3>Modify <span id="selected-mask-name"></span></h3>
+    <div id="modification-options"></div>
+    <button id="apply-modification" class="btn btn-primary">Apply Modifications</button>
+  </div>
+</div>
+
+<!-- Display selected transformations -->
+<div id="selected-transformations-display" class="mt-5">
+  <!-- Dynamically populated with selected transformations -->
+</div>
+
+<!-- Send Transformations Button -->
+<button id="send-transformations" class="btn btn-success mt-3" style="display:none;">Send Transformations</button>
+
+<!-- Result Box for Edited Image -->
+<div class="result-box mt-5 text-center" id="edited-image-result" style="display:none;">
+  <h3>Transformation Result</h3>
+  <img id="transformed-image" src="" alt="Transformed Image" class="img-fluid mt-3"/>
+  <a id="download-btn" class="btn-download mt-3" href="#" download="transformed-image.jpg">
+    <img src="static/img/btnDownload2.png" alt="Download Image" />
+  </a>
+</div>
+
+<!-- Modal Styling -->
+<style>
+  /* The Modal (background) */
+  .modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+  }
+
+  /* Modal Content/Box */
+  .modal-content {
+    background-color: #fefefe;
+    margin: 10% auto; /* 10% from the top and centered */
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #888;
+    width: 40%; /* Could be more or less, depending on screen size */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    position: relative;
+  }
+
+  /* The Close Button */
+  .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+  }
+
+  .close:hover,
+  .close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  /* Styling the options within the modal */
+  #modification-options label {
+    font-weight: bold;
+    display: block;
+    margin-top: 10px;
+  }
+
+  #modification-options input {
+    margin-right: 5px;
+  }
+
+  .option-group {
+    margin-bottom: 15px;
+  }
+
+  /* Button styling */
+  #apply-modification {
+    margin-top: 20px;
+    width: 100%;
+  }
+
+  #selected-transformations-display .transformation-item {
+    background-color: #f0f0f0;
+    padding: 10px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  #selected-transformations-display .remove-btn {
+    background-color: transparent;
+    color: red;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+  }
+
+  #selected-transformations-display .remove-btn:hover {
+    color: darkred;
+  }
+</style>
+
+<script>
+// Variables for managing upload and transformation
+let uploadId = '';
+let selectedMask = null;
+let baseImage, maskImages = {};
+let canvas, ctx;
+let currentHoveredMask = null;
+
+// Segment labels with modifications
+const segments = {
+  1: { name: "Hat", color: [128, 0, 0], modifications: { 'Change Color': ['Unchanged', 'Red', 'Blue'], 'Change Style': ['Unchanged', 'Cap', 'Wide Brim'] } },
+  2: { name: "Hair", color: [255, 165, 0], modifications: { 'Change Color': ['Unchanged', 'Blonde', 'Brown'], 'Change Style': ['Unchanged', 'Short', 'Long'] } },
+  3: { name: "Sunglasses", color: [255, 215, 0], modifications: { 'Change Color': ['Unchanged', 'Black', 'White'], 'Change Style': ['Unchanged', 'Round', 'Square'] } },
+  4: { name: "Upper-clothes", color: [0, 128, 0], modifications: { 'Change Color': ['Unchanged', 'Green', 'Yellow'], 'Change Style': ['Unchanged', 'T-shirt', 'Jacket'] } },
+  5: { name: "Skirt", color: [0, 0, 255], modifications: { 'Change Color': ['Unchanged', 'Red', 'Pink'], 'Change Style': ['Unchanged', 'Short', 'Long'] } },
+  6: { name: "Pants", color: [75, 0, 130], modifications: { 'Change Color': ['Unchanged', 'Blue', 'Black'], 'Change Style': ['Unchanged', 'Jeans', 'Shorts'] } },
+  7: { name: "Dress", color: [238, 130, 238], modifications: { 'Change Color': ['Unchanged', 'Purple', 'Blue'], 'Change Style': ['Unchanged', 'Formal', 'Casual'] } },
+  8: { name: "Belt", color: [255, 20, 147], modifications: { 'Change Color': ['Unchanged', 'Brown', 'Black'] } },
+  9: { name: "Left-shoe", color: [139, 69, 19], modifications: { 'Change Color': ['Unchanged', 'Brown', 'Black'] } },
+  10: { name: "Right-shoe", color: [210, 105, 30], modifications: { 'Change Color': ['Unchanged', 'Brown', 'Black'] } },
+  11: { name: "Face", color: [255, 192, 203], modifications: { 'Change Expression': ['Unchanged', 'Smile', 'Neutral', 'Angry'] } },
+  12: { name: "Left-leg", color: [0, 255, 127], modifications: { 'Change Color': ['Unchanged', 'Green', 'Blue'] } },
+  13: { name: "Right-leg", color: [32, 178, 170], modifications: { 'Change Color': ['Unchanged', 'Green', 'Blue'] } },
+  14: { name: "Left-arm", color: [70, 130, 180], modifications: { 'Change Color': ['Unchanged', 'Blue', 'Yellow'] } },
+  15: { name: "Right-arm", color: [135, 206, 250], modifications: { 'Change Color': ['Unchanged', 'Blue', 'Yellow'] } },
+  16: { name: "Bag", color: [240, 230, 140], modifications: { 'Change Color': ['Unchanged', 'Khaki', 'Brown'] } },
+  17: { name: "Scarf", color: [255, 0, 255], modifications: { 'Change Color': ['Unchanged', 'Magenta', 'Pink'] } }
+};
+
+// Object to store selected transformations
+let selectedTransformations = {};
+
+// Drag & Drop functionality
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const dropZoneText = document.getElementById('drop-zone-text');
+
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('dragover');
+});
+
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('dragover');
+});
+
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+
+  if (e.dataTransfer.files.length) {
+    fileInput.files = e.dataTransfer.files;
+    updateDropZoneText(fileInput.files[0].name);
+  }
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) {
+    updateDropZoneText(fileInput.files[0].name);
+  }
+});
+
+function updateDropZoneText(filename) {
+  dropZoneText.textContent = `File selected: ${filename}`;
+}
+
+// Handle form submission with AJAX
+document.getElementById('upload-form').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+
+  document.getElementById('progress').style.display = 'block';
+  document.getElementById('segmentation-result').style.display = 'none';
+
+  try {
+    const response = await fetch('/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+
+      document.getElementById('progress').style.display = 'none';
+      uploadId = data.upload_id;
+
+      canvas = document.getElementById('image-canvas');
+      ctx = canvas.getContext('2d');
+
+      baseImage = new Image();
+      baseImage.src = `/${data.base_image_path}`;
+      baseImage.onload = function () {
+        canvas.width = baseImage.width;
+        canvas.height = baseImage.height;
+        ctx.drawImage(baseImage, 0, 0);
+      };
+
+      for (const [classId, maskPath] of Object.entries(data.segmented_masks)) {
+        const maskImage = new Image();
+        maskImage.src = `/${maskPath}`;
+        maskImage.dataset.classId = classId;
+
+        maskImage.onload = function () {
+          maskImages[classId] = convertMaskToColor(maskImage, classId);
+        };
+      }
+
+      document.getElementById('segmentation-result').style.display = 'block';
+      setupMaskInteractions();
+    } else {
+      alert('Error: Something went wrong with the upload.');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    document.getElementById('progress').style.display = 'none';
+    alert('Error: Failed to process the request.');
+  }
+});
+
+function convertMaskToColor(maskImage, classId) {
+  if (classId === '0') return null;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = maskImage.width;
+  canvas.height = maskImage.height;
+  ctx.drawImage(maskImage, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  const [redColor, greenColor, blueColor] = segments[classId].color;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i] === 0) {
+      data[i + 3] = 0;
+    } else {
+      data[i] = redColor;
+      data[i + 1] = greenColor;
+      data[i + 2] = blueColor;
+      data[i + 3] = 150;
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
+function setupMaskInteractions() {
+  canvas.addEventListener('mousemove', handleMouseMove);
+  canvas.addEventListener('click', handleClick);
+}
+
+function handleMouseMove(e) {
+  const [x, y] = getMousePos(e);
+  const hoveredMask = getMaskAtPosition(x, y);
+
+  if (hoveredMask !== currentHoveredMask) {
+    if (currentHoveredMask) drawMask(currentHoveredMask, 0.3);
+    if (hoveredMask) drawMask(hoveredMask, 0.7);
+    currentHoveredMask = hoveredMask;
+  }
+}
+
+function handleClick(e) {
+  if (currentHoveredMask) {
+    selectedMask = currentHoveredMask;
+    drawMask(selectedMask, 0.9);
+    showModificationPanel(selectedMask);
+  }
+}
+
+function drawMask(classId, opacity) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(baseImage, 0, 0);
+  const maskCanvas = maskImages[classId];
+  ctx.globalAlpha = opacity;
+  ctx.drawImage(maskCanvas, 0, 0);
+  ctx.globalAlpha = 1.0;
+}
+
+function getMousePos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return [e.clientX - rect.left, e.clientY - rect.top];
+}
+
+function getMaskAtPosition(x, y) {
+  for (const [classId, maskCanvas] of Object.entries(maskImages)) {
+    if (classId === '0') continue;
+    const maskCtx = maskCanvas.getContext('2d');
+    const pixelData = maskCtx.getImageData(x, y, 1, 1).data;
+    if (pixelData[3] !== 0) return classId;
+  }
+  return null;
+}
+
+function showModificationPanel(maskId) {
+  const maskName = segments[maskId].name;
+  const modifications = segments[maskId].modifications;
+  document.getElementById('selected-mask-name').innerText = maskName;
+
+  const optionsContainer = document.getElementById('modification-options');
+  optionsContainer.innerHTML = '';
+
+  for (const [modType, options] of Object.entries(modifications)) {
+    const modLabel = document.createElement('label');
+    modLabel.innerText = modType;
+    optionsContainer.appendChild(modLabel);
+
+    options.forEach(option => {
+      const radio = document.createElement('input');
+      radio.type = 'radio';
+      radio.value = option;
+      radio.name = modType;
+      optionsContainer.appendChild(radio);
+      optionsContainer.appendChild(document.createTextNode(option));
+      optionsContainer.appendChild(document.createElement('br'));
+    });
+  }
+
+  const modal = document.getElementById('modification-modal');
+  modal.style.display = 'block';
+
+  document.querySelector('.modal .close').onclick = function () {
+    modal.style.display = 'none';
+  };
+
+  window.onclick = function (event) {
+    if (event.target === modal) modal.style.display = 'none';
+  };
+
+  document.getElementById('apply-modification').onclick = function () {
+    const modificationsApplied = {};
+    optionsContainer.querySelectorAll('input[type="radio"]:checked').forEach(input => {
+      modificationsApplied[input.name] = input.value;
+    });
+
+    selectedTransformations[maskId] = modificationsApplied;
+    modal.style.display = 'none';
+
+    updateTransformationsDisplay();
+  };
+}
+
+// Function to update the display of selected transformations
+function updateTransformationsDisplay() {
+  const display = document.getElementById('selected-transformations-display');
+  display.innerHTML = ''; // Clear previous items
+
+  for (const [maskId, modifications] of Object.entries(selectedTransformations)) {
+    const transformationDiv = document.createElement('div');
+    transformationDiv.className = 'transformation-item';
+    transformationDiv.innerHTML = `<span>${segments[maskId].name} - ${JSON.stringify(modifications)}</span>`;
+
+    // Add remove button for each transformation
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-btn';
+    removeBtn.innerHTML = '&times;';
+    removeBtn.onclick = function () {
+      delete selectedTransformations[maskId];
+      updateTransformationsDisplay();
+    };
+    transformationDiv.appendChild(removeBtn);
+
+    display.appendChild(transformationDiv);
+  }
+
+  // Show send transformations button if there are any transformations
+  document.getElementById('send-transformations').style.display = Object.keys(selectedTransformations).length > 0 ? 'block' : 'none';
+}
+
+// Send transformations to server
+document.getElementById('send-transformations').onclick = async function () {
+  try {
+    const response = await fetch('/transform', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        upload_id: uploadId,
+        transformations: selectedTransformations
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      document.getElementById('transformed-image').src = data.transformed_image_url;
+      document.getElementById('edited-image-result').style.display = 'block';
+    } else {
+      alert('Error: Failed to apply transformations.');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Error: An error occurred while sending transformations.');
+  }
+};
+</script>
 {% endblock %}
