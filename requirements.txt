@@ -1,8 +1,7 @@
-numpy==1.26.4
-torch==2.4.1
-transformers==4.44.1
-flask~=3.0.3
-werkzeug~=3.0.3
-matplotlib~=3.9.2
-pillow~=10.4.0
-#diffusers~=0.18.2
+diffusers==0.30.3
+Flask==3.0.3
+numpy==2.1.2
+Pillow==11.0.0
+torch==2.6.0.dev20240924
+transformers==4.45.2
+Werkzeug==3.0.4
