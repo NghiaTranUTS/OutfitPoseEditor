@@ -2,52 +2,42 @@ import torch
 from diffusers import AutoPipelineForInpainting
 from PIL import Image
 import numpy as np
-from segmentation import segment_image
+from controller.segmentation import Segmentation  # Assuming segmentation is part of the controller
 
-def perform_inpainting(image_path, target_class_id, prompt, negative_prompt):
-    """ Perform segmentation, generate a mask, and apply inpainting based on the provided prompt. """
-    # Load the original image
-    original_image = Image.open(image_path).convert("RGB")
 
-    # Segment the image and get predictions
-    _, pred_seg = segment_image(image_path)
+class Inpainting:
+    def __init__(self, model_name="kandinsky-community/kandinsky-2-2-decoder-inpaint", torch_dtype=torch.float16):
+        """Initialize the inpainting pipeline."""
+        self.pipeline = AutoPipelineForInpainting.from_pretrained(
+            model_name,
+            torch_dtype=torch_dtype
+        )
+        self.pipeline.enable_model_cpu_offload()
+        self.segmentation = Segmentation()
 
-    # Generate mask for the selected class ID
-    mask_image = generate_mask_for_class(pred_seg, target_class_id)
+    def perform_inpainting(self, image_path, target_class_id, prompt, negative_prompt=None):
+        """Perform inpainting based on the provided prompt and class segmentation."""
+        # Load the original image
+        original_image = Image.open(image_path).convert("RGB")
 
-    # Load the inpainting pipeline
-    pipeline = AutoPipelineForInpainting.from_pretrained(
-        "kandinsky-community/kandinsky-2-2-decoder-inpaint",
-        torch_dtype=torch.float16
-    )
-    pipeline.enable_model_cpu_offload()
-    
-    # Perform inpainting
-    edited_image = pipeline(
-        prompt=prompt,
-        negative_prompt=negative_prompt,
-        image=original_image,
-        mask_image=mask_image
-    ).images[0]
+        # Segment the image
+        _, pred_seg = self.segmentation.segment_image(image_path)
 
-    return original_image, mask_image, edited_image
+        # Generate the mask for the selected class
+        mask_image = self.generate_mask_for_class(pred_seg, target_class_id)
 
-def generate_mask_for_class(pred_seg, target_class_id):
-    """ Generate a mask for the selected class from the segmentation output. """
-    # Generate a boolean mask where target class pixels are True
-    mask = (pred_seg == target_class_id).numpy()
-    # Convert boolean mask to uint8 mask where target class pixels are 255 (white), others are 0 (black)
-    return Image.fromarray((mask * 255).astype(np.uint8), 'L')
+        # Perform inpainting using the inpainting model
+        edited_image = self.pipeline(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            image=original_image,
+            mask_image=mask_image
+        ).images[0]
 
-if __name__ == "__main__":
-    image_path = "C:/Users/whale/Games/segment/Beret.jpg"  # Change to the path of the image
-    target_class_id = 6  # Change as needed
-    prompt = "Change shirt to jacket"  # Example prompt
-    negative_prompt = "Minimalistic"  # Example negative prompt
+        return original_image, mask_image, edited_image
 
-    original_image, mask_image, edited_image = perform_inpainting(image_path, target_class_id, prompt, negative_prompt)
-
-    # Save the results
-    original_image.save("C:/Users/whale/Games/segment/Beret2.jpg")
-    mask_image.save("mask_image.png")
-    edited_image.save("edited_image.jpg")
+    def generate_mask_for_class(self, pred_seg, target_class_id):
+        """Generate a mask for the selected class."""
+        mask = (pred_seg == target_class_id).numpy()  # Boolean mask where the target class is True
+        mask_image = Image.fromarray((mask * 255).astype(np.uint8), 'L')  # Convert to uint8 and return mask
+        return mask_image
