@@ -82,10 +82,12 @@ cleanup_thread.start()
 def index():
     return render_template('service.html')
 
+
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'img/logo1.png', mimetype='image/vnd.microsoft.icon')
+
 
 @app.route('/about')
 def about():
@@ -168,8 +170,8 @@ def upload():
         return jsonify({'status': 'error', 'message': 'An error occurred during upload.'}), 500
 
 
-@app.route('/transform', methods=['POST'])
-def transform():
+@app.route('/transform_old', methods=['POST'])
+def transform_old():
     try:
         # Log/Print the entire incoming request JSON for debugging
         data = request.get_json()  # Get the JSON payload
@@ -228,6 +230,64 @@ def transform():
             'status': 'success',
             'message': 'Transformation applied successfully.',
             'transformed_image_url': edited_image_path.replace("\\", "/")
+        })
+
+    except Exception as e:
+        error_logger.error(f"Error during transformation: {str(e)}")
+        return jsonify({'status': 'error', 'message': f'An error occurred during transformation: {str(e)}'}), 500
+
+
+@app.route('/transform', methods=['POST'])
+def transform():
+    try:
+        # Log the incoming JSON payload
+        data = request.get_json()
+        print(f"Received JSON: {data}")
+
+        # Extract parameters from JSON
+        upload_id = data.get('upload_id')
+        transformations = data.get('transformations')
+
+        # Validate inputs
+        if not upload_id:
+            return jsonify({'status': 'error', 'message': 'Upload ID is missing.'}), 400
+        if not transformations:
+            return jsonify({'status': 'error', 'message': 'Transformations are missing.'}), 400
+
+        # Path to the base image
+        current_image_path = os.path.join(BASE_UPLOAD_FOLDER, upload_id, "resized_image.png")
+        print(f"Starting image path: {current_image_path}")
+
+        # Initialize Inpainting object
+        inpainting = Inpainting()
+
+        # Process each transformation sequentially
+        for segment, transformation_details in transformations.items():
+            print(f"Processing Segment: {segment}, Details: {transformation_details}")
+
+            # Create a prompt based on the transformation details
+            prompt_parts = [f"{key} to {value}" for key, value in transformation_details.items()]
+            prompt = ", ".join(prompt_parts)
+            print(f"Generated Prompt for Segment {segment}: {prompt}")
+
+            # Perform inpainting
+            target_class_id = int(segment)  # Convert segment to int
+            original_image, mask_image, edited_image = inpainting.perform_inpainting(
+                image_path=current_image_path,
+                target_class_id=target_class_id,
+                prompt=prompt,
+                negative_prompt=None
+            )
+
+            # Save the updated image to be used as input for the next transformation
+            current_image_path = os.path.join(BASE_UPLOAD_FOLDER, upload_id, f"transformed_image_{segment}.png")
+            edited_image.save(current_image_path)  # Save the cumulative transformation
+
+        # Return the final transformed image path
+        return jsonify({
+            'status': 'success',
+            'message': 'All transformations applied successfully.',
+            'transformed_image_url': current_image_path.replace("\\", "/")  # Final transformed image
         })
 
     except Exception as e:
